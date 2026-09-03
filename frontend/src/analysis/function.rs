@@ -14,7 +14,7 @@ pub struct Function {
 
 #[derive(Debug, PartialEq, Eq, Clone, Constructor)]
 pub struct Param {
-    id: LocalVarId,
+    pub id: LocalVarId,
     pub ty: Type,
 }
 

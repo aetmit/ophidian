@@ -5,7 +5,7 @@ pub mod resolution;
 pub mod types;
 pub mod ids;
 pub mod globals;
-
+pub mod lowerer;
 
 use crate::analysis::declarations::Collecter;
 use crate::analysis::function::{Function, FunctionAnalyzer};

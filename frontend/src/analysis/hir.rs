@@ -4,7 +4,7 @@ use crate::analysis::ids::{FunctionId, GlobalVarId, LocalVarId, HirId};
 use crate::analysis::types::Type;
 
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Program {
     pub items: Vec<Item>,
 }
