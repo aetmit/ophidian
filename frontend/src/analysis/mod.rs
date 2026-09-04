@@ -12,6 +12,7 @@ use crate::analysis::function::{Function, FunctionAnalyzer};
 use crate::analysis::ids::{FunctionId, GlobalVarId, LocalVarId, VariableId};
 use crate::analysis::resolution::{GlobalScope, GlobalVarDecl, Scope};
 use crate::analysis::types::{Conversion, Type};
+use crate::analysis::lowerer::Lowerer;
 use crate::diagnostics::Diagnostic;
 use crate::parse::ast::{self, NodeId};
 use std::collections::HashMap;
@@ -46,8 +47,10 @@ impl<'diag> SemanticAnalyzer<'diag> {
                 ctx.converted_types.insert(*id, *value);
             }
         }
-        todo!()
 
+        let mut lowerer = Lowerer::new();
+        let hir = lowerer.lower(program, &mut ctx);
+        Ok(hir)
     }
 }
 

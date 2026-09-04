@@ -23,7 +23,7 @@ impl Lowerer {
                     items.push(item);
                 }
                 ast::Item::GlobalVarDecl(decl) => {
-                    let item = hir::Item::GlobalVarDecl(self.lower_globalvardecl(decl, ctx))
+                    let item = hir::Item::GlobalVarDecl(self.lower_globalvardecl(decl, ctx));
                     items.push(item);
                 }
             }
