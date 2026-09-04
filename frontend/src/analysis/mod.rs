@@ -36,6 +36,10 @@ impl<'diag> SemanticAnalyzer<'diag> {
         let mut function_analyzer = FunctionAnalyzer::new();
         function_analyzer.analyze(&program, &mut ctx);
 
+        if !ctx.diagnostics.is_empty() {
+            return Err(());
+        }
+
         let mut global_analyzer = GlobalVarAnalyzer::new();
         global_analyzer.analyze_globals(program, &mut ctx);
 

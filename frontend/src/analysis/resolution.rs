@@ -4,7 +4,7 @@ use crate::analysis::AnalysisCtx;
 use crate::analysis::ids::{GlobalVarId, LocalVarId, VariableId};
 use crate::analysis::types::Type;
 use crate::diagnostics::{Diagnostic, Severity};
-use crate::parse::ast::{Expr, ExprKind, ForInit, NodeId, Stmt, StmtKind};
+use crate::parse::ast::{Expr, ExprKind, ForInit, Stmt, StmtKind};
 use crate::span::Span;
 use std::collections::HashMap;
 
@@ -225,8 +225,8 @@ impl Resolver {
             ExprKind::Variable(name) => match self.lookup_var(name, ctx) {
                 Some(id) => {
                     match id {
-                        VariableId::Global(_id) => {
-                            // nothing is necessary here?
+                        VariableId::Global(id) => {
+                            ctx.variables.insert(expr.id, VariableId::Global(id));
                         }
                         VariableId::Local(id) => {
                             ctx.variables.insert(expr.id, VariableId::Local(id));
