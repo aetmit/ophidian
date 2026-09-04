@@ -13,6 +13,7 @@ use crate::analysis::ids::{FunctionId, GlobalVarId, LocalVarId, VariableId};
 use crate::analysis::resolution::{GlobalScope, GlobalVarDecl, Scope};
 use crate::analysis::types::{Conversion, Type};
 use crate::analysis::lowerer::Lowerer;
+use crate::analysis::globals::GlobalVarAnalyzer;
 use crate::diagnostics::Diagnostic;
 use crate::parse::ast::{self, NodeId};
 use std::collections::HashMap;
@@ -35,6 +36,9 @@ impl<'diag> SemanticAnalyzer<'diag> {
 
         let mut function_analyzer = FunctionAnalyzer::new();
         function_analyzer.analyze(&program, &mut ctx);
+
+        let mut global_analyzer = GlobalVarAnalyzer::new();
+        global_analyzer.analyze_globals(program, &mut ctx);
 
         for (id, value) in &ctx.types {
             if let Some(conversion_type) = ctx.conversions.get(id) {
