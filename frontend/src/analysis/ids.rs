@@ -1,3 +1,4 @@
+use macros::AddAssign;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalVarId(pub usize);
@@ -40,7 +41,8 @@ impl std::ops::AddAssign<usize> for FunctionId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, AddAssign)]
+#[add_assign(rhs = "usize")]
 pub struct HirId(pub usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
