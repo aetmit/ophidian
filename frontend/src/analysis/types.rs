@@ -39,7 +39,6 @@ pub enum Conversion {
 }
 
 pub struct TypeChecker {
-
     // true if the typechecker is currently type checking a function
     is_checking_fn: bool,
     fn_ret_type: Option<Type>,
@@ -322,7 +321,7 @@ impl TypeChecker {
     }
 
     fn is_callable(&self, node: &Expr) -> bool {
-        // so functions dont yet exist as first class objects therefore 
+        // so functions dont yet exist as first class objects therefore
         // there is no function type so this function cannot be implemented yet
         todo!()
     }

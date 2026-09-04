@@ -4,7 +4,7 @@ use crate::analysis::AnalysisCtx;
 use crate::analysis::ids::{GlobalVarId, LocalVarId, VariableId};
 use crate::analysis::types::Type;
 use crate::diagnostics::{Diagnostic, Severity};
-use crate::parse::ast::{Expr, ExprKind, ForInit, Stmt, StmtKind, NodeId};
+use crate::parse::ast::{Expr, ExprKind, ForInit, NodeId, Stmt, StmtKind};
 use crate::span::Span;
 use std::collections::HashMap;
 
@@ -18,7 +18,9 @@ pub struct GlobalScope {
 
 impl GlobalScope {
     pub fn new() -> Self {
-        Self { globals: HashMap::new() }
+        Self {
+            globals: HashMap::new(),
+        }
     }
 }
 
@@ -256,9 +258,7 @@ impl Resolver {
                 }
 
                 let ident = match &callee.kind {
-                    ExprKind::Variable(ident) => {
-                        ident
-                    }
+                    ExprKind::Variable(ident) => ident,
                     _ => {
                         panic!("functions are not yet first class objects")
                     }
@@ -271,7 +271,13 @@ impl Resolver {
         }
     }
 
-    pub(super) fn declare_existing_var(&mut self, name: &[u8], id: LocalVarId, ctx: &mut AnalysisCtx, span: Span) {
+    pub(super) fn declare_existing_var(
+        &mut self,
+        name: &[u8],
+        id: LocalVarId,
+        ctx: &mut AnalysisCtx,
+        span: Span,
+    ) {
         if ctx.scopes.last().unwrap().vars.contains_key(name) {
             self.error(
                 format!(
@@ -284,7 +290,11 @@ impl Resolver {
             return;
         }
 
-        ctx.scopes.last_mut().unwrap().vars.insert(name.to_vec(), id);
+        ctx.scopes
+            .last_mut()
+            .unwrap()
+            .vars
+            .insert(name.to_vec(), id);
     }
 
     fn declare_var(&mut self, name: &[u8], ctx: &mut AnalysisCtx, span: Span) -> LocalVarId {
@@ -311,7 +321,8 @@ impl Resolver {
     }
 
     fn lookup_var(&mut self, name: &[u8], ctx: &mut AnalysisCtx) -> Option<VariableId> {
-        let local = ctx.scopes
+        let local = ctx
+            .scopes
             .iter()
             .rev()
             .find_map(|s| s.vars.get(name).copied());
@@ -322,7 +333,7 @@ impl Resolver {
             }
             None => {
                 let id = ctx.global_scope.globals.get(name).copied();
-                    
+
                 match id {
                     Some(id) => {
                         return Some(VariableId::Global(id));

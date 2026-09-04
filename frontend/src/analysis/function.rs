@@ -1,9 +1,9 @@
 use macros::Constructor;
 
-use crate::analysis::types::{Type, TypeChecker};
-use crate::analysis::resolution::Resolver;
-use crate::analysis::ids::{LocalVarId, VariableId};
 use crate::analysis::AnalysisCtx;
+use crate::analysis::ids::{LocalVarId, VariableId};
+use crate::analysis::resolution::Resolver;
+use crate::analysis::types::{Type, TypeChecker};
 use crate::parse::ast::{Function as AstFunction, Item, Program};
 
 #[derive(Debug, PartialEq, Eq, Clone, Constructor)]
@@ -45,7 +45,7 @@ impl FunctionAnalyzer {
         for param in &function.params {
             let id = *ctx.variables.get(&param.id).unwrap();
             match id {
-                VariableId::Global(_)  => {
+                VariableId::Global(_) => {
                     unreachable!()
                 }
                 VariableId::Local(id) => {
@@ -62,7 +62,10 @@ impl FunctionAnalyzer {
         }
 
         let mut typechecker = TypeChecker::new();
-        typechecker.check_fn(&function.body.node.body, function.return_type.unwrap_or(Type::Void), ctx);
-
+        typechecker.check_fn(
+            &function.body.node.body,
+            function.return_type.unwrap_or(Type::Void),
+            ctx,
+        );
     }
 }

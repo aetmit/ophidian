@@ -1,6 +1,9 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput, Error, Fields, LitStr, Result, Type, parse_macro_input, parse_quote};
+use syn::{
+    Attribute, Data, DeriveInput, Error, Fields, LitStr, Result, Type, parse_macro_input,
+    parse_quote,
+};
 
 pub fn expand(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -30,8 +33,9 @@ pub fn expand(input: TokenStream) -> TokenStream {
                         return {
                             quote! {
                                 compile_error!("AddAssign requires exactly 1 field");
-                            }.into()
-                        }
+                            }
+                            .into()
+                        };
                     }
 
                     quote! {
@@ -43,8 +47,9 @@ pub fn expand(input: TokenStream) -> TokenStream {
                         return {
                             quote! {
                                 compile_error!("AddAssign requires exactly 1 field");
-                            }.into()
-                        }
+                            }
+                            .into()
+                        };
                     }
 
                     let field = fields.named.first().unwrap();
@@ -59,12 +64,12 @@ pub fn expand(input: TokenStream) -> TokenStream {
         _ => {
             return quote! {
                 compile_error!("AddAssign can only be derived for structs");
-            }.into();
+            }
+            .into();
         }
     };
 
-    let (impl_generics, ty_generics, where_clause) =
-        generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote! {
         impl #impl_generics std::ops::AddAssign<#rhs_type>

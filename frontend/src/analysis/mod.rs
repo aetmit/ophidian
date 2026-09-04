@@ -1,19 +1,19 @@
 pub mod declarations;
 pub mod function;
+pub mod globals;
 pub mod hir;
+pub mod ids;
+pub mod lowerer;
 pub mod resolution;
 pub mod types;
-pub mod ids;
-pub mod globals;
-pub mod lowerer;
 
 use crate::analysis::declarations::Collecter;
 use crate::analysis::function::{Function, FunctionAnalyzer};
+use crate::analysis::globals::GlobalVarAnalyzer;
 use crate::analysis::ids::{FunctionId, GlobalVarId, LocalVarId, VariableId};
+use crate::analysis::lowerer::Lowerer;
 use crate::analysis::resolution::{GlobalScope, GlobalVarDecl, Scope};
 use crate::analysis::types::{Conversion, Type};
-use crate::analysis::lowerer::Lowerer;
-use crate::analysis::globals::GlobalVarAnalyzer;
 use crate::diagnostics::Diagnostic;
 use crate::parse::ast::{self, NodeId};
 use std::collections::HashMap;
@@ -21,7 +21,6 @@ use std::collections::HashMap;
 pub struct SemanticAnalyzer<'diag> {
     diagnostics: &'diag mut Vec<Diagnostic>,
 }
-
 
 impl<'diag> SemanticAnalyzer<'diag> {
     pub fn new(diagnostics: &'diag mut Vec<Diagnostic>) -> Self {

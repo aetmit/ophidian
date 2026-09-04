@@ -266,9 +266,10 @@ impl<'src, 'diag, T: TokenStream> Parser<'src, 'diag, T> {
             // parse_statement guarenteed to parse a var decl because of TokenKind::Let
             let stmt = self.parse_statement();
             let span = stmt.span;
-            Some(Box::new(ForInit::Decl(
-                Spanned::new(stmt.try_into().expect("unreacheable"), span),
-            )))
+            Some(Box::new(ForInit::Decl(Spanned::new(
+                stmt.try_into().expect("unreacheable"),
+                span,
+            ))))
         } else if self.peek().kind == TokenKind::Semicolon {
             self.advance();
             None

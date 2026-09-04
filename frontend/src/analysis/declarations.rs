@@ -1,8 +1,8 @@
 use crate::analysis::AnalysisCtx;
 use crate::analysis::function::{Function, Param};
-use crate::analysis::types::Type;
 use crate::analysis::ids::{FunctionId, GlobalVarId, VariableId};
 use crate::analysis::resolution::GlobalVarDecl;
+use crate::analysis::types::Type;
 use crate::diagnostics::{Diagnostic, Severity};
 use crate::parse::ast;
 use crate::span::Span;
@@ -45,7 +45,7 @@ impl<'a> Collecter<'a> {
     fn alloc_globalvar_id(&mut self) -> GlobalVarId {
         let id = self.curr_globalvar_id;
         self.curr_globalvar_id += 1;
-        id 
+        id
     }
 
     fn error<T: Into<String>>(&self, msg: T, span: Span, ctx: &mut AnalysisCtx) {
@@ -88,7 +88,6 @@ impl<'a> Collecter<'a> {
 
         let function = Function::new(return_type, params);
         ctx.signatures.insert(fn_id, function);
-
     }
 
     fn collect_global_var_decl(&mut self, vardecl: &'a ast::GlobalVarDecl, ctx: &mut AnalysisCtx) {
@@ -104,7 +103,9 @@ impl<'a> Collecter<'a> {
         }
 
         let decl_id = self.alloc_globalvar_id();
-        ctx.global_scope.globals.insert(vardecl.name.clone(), decl_id);
+        ctx.global_scope
+            .globals
+            .insert(vardecl.name.clone(), decl_id);
         ctx.global_vars.insert(vardecl.id, decl_id);
 
         let type_annotation = vardecl.type_annotation;

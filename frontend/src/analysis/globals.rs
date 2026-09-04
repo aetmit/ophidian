@@ -1,8 +1,8 @@
-use crate::parse::ast::{Expr, GlobalVarDecl, Item, Program, ExprKind, LitKind};
 use crate::analysis::AnalysisCtx;
 use crate::analysis::types::Type;
-use crate::span::Span;
 use crate::diagnostics::{Diagnostic, Severity};
+use crate::parse::ast::{Expr, ExprKind, GlobalVarDecl, Item, LitKind, Program};
+use crate::span::Span;
 
 pub struct GlobalVarAnalyzer;
 
@@ -25,18 +25,21 @@ impl GlobalVarAnalyzer {
     }
 
     fn error<T: Into<String>>(&self, message: T, span: Span, ctx: &mut AnalysisCtx) {
-        ctx.diagnostics.push(Diagnostic::new(message.into(), span, Severity::Error));
+        ctx.diagnostics
+            .push(Diagnostic::new(message.into(), span, Severity::Error));
     }
 
-    fn analyze_globaldecl(&mut self, decl: &GlobalVarDecl, ctx: &mut AnalysisCtx)  {
+    fn analyze_globaldecl(&mut self, decl: &GlobalVarDecl, ctx: &mut AnalysisCtx) {
         // let id = ctx.global_vars.get(&decl.id).unwrap();
 
         let init = match &decl.init {
-            Some(init) => {
-                init
-            }
+            Some(init) => init,
             None => {
-                self.error("global variable declaration must have initializer", decl.span, ctx);
+                self.error(
+                    "global variable declaration must have initializer",
+                    decl.span,
+                    ctx,
+                );
                 return;
             }
         };
@@ -54,7 +57,11 @@ impl GlobalVarAnalyzer {
 
     fn analyze_init(&mut self, expr: &Expr, ctx: &mut AnalysisCtx) -> Type {
         if !self.is_constant(expr) {
-            self.error("cannot initialize global variable with non constant expression", expr.span, ctx);
+            self.error(
+                "cannot initialize global variable with non constant expression",
+                expr.span,
+                ctx,
+            );
             return Type::Error;
         }
 
@@ -63,48 +70,29 @@ impl GlobalVarAnalyzer {
 
     fn get_expr_type(&self, expr: &Expr) -> Type {
         match &expr.kind {
-            ExprKind::Literal(lit) => {
-                match lit {
-                    LitKind::Bool(..) => {
-                        return Type::Bool
-                    }
-                    LitKind::Float(..) => {
-                        return Type::Double
-                    }
-                    LitKind::Int(..) => {
-                        return Type::Int
-                    }
-                }
-            }
+            ExprKind::Literal(lit) => match lit {
+                LitKind::Bool(..) => return Type::Bool,
+                LitKind::Float(..) => return Type::Double,
+                LitKind::Int(..) => return Type::Int,
+            },
             ExprKind::Call(callee, args) => {
                 todo!()
             }
-            _ => todo!()
+            _ => todo!(),
         }
     }
 
     fn is_constant(&self, expr: &Expr) -> bool {
         match &expr.kind {
-            ExprKind::BinaryOp(.., lhs, rhs) => {
-                self.is_constant(&lhs) && self.is_constant(&rhs)
-            }
-            ExprKind::Literal(_) => {
-                true
-            }
-            ExprKind::UnaryOp(.., operand) => {
-                self.is_constant(&operand)
-            }
-            ExprKind::Call(..) => {
-                false
-            }
+            ExprKind::BinaryOp(.., lhs, rhs) => self.is_constant(&lhs) && self.is_constant(&rhs),
+            ExprKind::Literal(_) => true,
+            ExprKind::UnaryOp(.., operand) => self.is_constant(&operand),
+            ExprKind::Call(..) => false,
             ExprKind::Variable(_name) => {
                 // check if variable is constant
                 todo!()
             }
-            _ => {
-                false
-            }
+            _ => false,
         }
     }
-
 }

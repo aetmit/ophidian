@@ -1,7 +1,7 @@
-use crate::parse::ast;
-use crate::analysis::hir;
 use crate::analysis::AnalysisCtx;
+use crate::analysis::hir;
 use crate::analysis::ids::HirId;
+use crate::parse::ast;
 
 pub struct Lowerer {
     curr_hirid: HirId,
@@ -33,10 +33,14 @@ impl Lowerer {
     }
 
     fn lower_function(&mut self, function: &ast::Function, ctx: &mut AnalysisCtx) -> hir::Function {
-        todo!() 
+        todo!()
     }
 
-    fn lower_globalvardecl(&mut self, decl: &ast::GlobalVarDecl, ctx: &mut AnalysisCtx) -> hir::GlobalVarDecl {
+    fn lower_globalvardecl(
+        &mut self,
+        decl: &ast::GlobalVarDecl,
+        ctx: &mut AnalysisCtx,
+    ) -> hir::GlobalVarDecl {
         todo!()
     }
 

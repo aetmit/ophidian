@@ -244,7 +244,6 @@ pub struct Block {
     pub body: Vec<Stmt>,
 }
 
-
 impl TryFrom<Stmt> for Block {
     type Error = ();
 
