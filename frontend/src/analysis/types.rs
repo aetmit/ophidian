@@ -2,7 +2,7 @@ use crate::analysis::AnalysisCtx;
 use crate::diagnostics::{Diagnostic, Severity};
 use crate::lex::token::TokenKind;
 use crate::parse::ast::{
-    BinOpKind, Expr, ExprKind, ForInit, LitKind, NodeId, Stmt, StmtKind, UnaryOpKind,
+    BinOpKind, Expr, ExprKind, ForInit, LitKind, NodeId, Stmt, StmtKind, UnaryOpKind, VarDecl,
 };
 use crate::span::Span;
 
@@ -93,39 +93,7 @@ impl TypeChecker {
                 }
             }
             StmtKind::VarDecl(decl) => {
-                match decl.type_annotation {
-                    Some(annotation) => {
-                        // unwrap because name resolution has already checked
-                        let varid = *ctx.variables.get(&stmt.id).unwrap();
-
-                        match &decl.init {
-                            Some(init) => {
-                                let initializer_type = self.check_expr(&init, ctx);
-
-                                if !self.can_assign(initializer_type, annotation, &init, ctx) {
-                                    self.error("mismatched types", stmt.span, ctx);
-                                    return;
-                                }
-
-                                ctx.var_types.insert(varid, annotation);
-                            }
-                            None => {
-                                ctx.var_types.insert(varid, annotation);
-                            }
-                        }
-                    }
-                    None => match &decl.init {
-                        Some(init) => {
-                            let initializer_type = self.check_expr(&init, ctx);
-
-                            let varid = *ctx.variables.get(&stmt.id).unwrap();
-                            ctx.var_types.insert(varid, initializer_type);
-                        }
-                        None => {
-                            self.error("type annotation required", stmt.span, ctx);
-                        }
-                    },
-                }
+                self.check_vardecl(stmt, decl, ctx);
             }
             StmtKind::If(i) => {
                 let cond_ty = self.check_expr(&i.condition, ctx);
@@ -167,14 +135,7 @@ impl TypeChecker {
             }
             StmtKind::For(f) => {
                 if let Some(init) = &f.init {
-                    match &**init {
-                        ForInit::Decl(_decl) => {
-                            self.check_stmt(stmt, ctx);
-                        }
-                        ForInit::Expr(expr) => {
-                            self.check_expr(expr, ctx);
-                        }
-                    }
+                    self.check_forinit(&**init, ctx);
                 }
 
                 if let Some(cond) = &f.condition {
@@ -318,6 +279,51 @@ impl TypeChecker {
         ctx.types.insert(expr.id, ty);
 
         ty
+    }
+
+    fn check_vardecl(&mut self, stmt: &Stmt, decl: &VarDecl, ctx: &mut AnalysisCtx) {
+        match decl.type_annotation {
+            Some(annotation) => {
+                // unwrap because name resolution has already checked
+                let varid = *ctx.variables.get(&stmt.id).unwrap();
+
+                match &decl.init {
+                    Some(init) => {
+                        let initializer_type = self.check_expr(&init, ctx);
+
+                        if !self.can_assign(initializer_type, annotation, &init, ctx) {
+                            self.error("mismatched types", stmt.span, ctx);
+                            return;
+                        }
+
+                        ctx.var_types.insert(varid, annotation);
+                    }
+                    None => {
+                        ctx.var_types.insert(varid, annotation);
+                    }
+                }
+            }
+            None => match &decl.init {
+                Some(init) => {
+                    let initializer_type = self.check_expr(&init, ctx);
+
+                    let varid = *ctx.variables.get(&stmt.id).unwrap();
+                    ctx.var_types.insert(varid, initializer_type);
+                }
+                None => {
+                    self.error("type annotation required", stmt.span, ctx);
+                }
+            },
+        }
+    }
+
+    fn check_forinit(&mut self, init: &ForInit, ctx: &mut AnalysisCtx) {
+        match init.kind {
+            ForInit::Decl(decl) => {}
+            ForInit::Expr(expr) => {
+                self.check_expr(&expr, ctx);
+            }
+        }
     }
 
     fn is_callable(&self, node: &Expr) -> bool {

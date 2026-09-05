@@ -180,9 +180,15 @@ impl Expr {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ForInit {
+pub enum ForInitKind {
     Expr(Expr),
     Decl(Spanned<VarDecl>),
+}
+
+#[derive(Debug, PartialEq, Clone, Constructor)]
+pub struct ForInit {
+    pub kind: ForInitKind,
+    pub id: NodeId,
 }
 
 #[derive(Debug, PartialEq, Clone, Constructor)]

@@ -4,7 +4,7 @@ use crate::analysis::AnalysisCtx;
 use crate::analysis::ids::{GlobalVarId, LocalVarId, VariableId};
 use crate::analysis::types::Type;
 use crate::diagnostics::{Diagnostic, Severity};
-use crate::parse::ast::{Expr, ExprKind, ForInit, Stmt, StmtKind};
+use crate::parse::ast::{Expr, ExprKind, ForInit, ForInitKind, Stmt, StmtKind};
 use crate::span::Span;
 use std::collections::HashMap;
 
@@ -164,11 +164,11 @@ impl Resolver {
         self.enter_scope(ctx);
 
         match init {
-            Some(init) => match &**init {
-                ForInit::Expr(expr) => {
+            Some(init) => match &init.kind {
+                ForInitKind::Expr(expr) => {
                     self.resolve_expr(&expr, ctx);
                 }
-                ForInit::Decl(decl) => {
+                ForInitKind::Decl(decl) => {
                     self.resolve_vardecl(&body, &decl.node.name, &decl.node.init, ctx);
                 }
             },
@@ -223,16 +223,14 @@ impl Resolver {
                 self.resolve_expr(target, ctx);
             }
             ExprKind::Variable(name) => match self.lookup_var(name, ctx) {
-                Some(id) => {
-                    match id {
-                        VariableId::Global(id) => {
-                            ctx.variables.insert(expr.id, VariableId::Global(id));
-                        }
-                        VariableId::Local(id) => {
-                            ctx.variables.insert(expr.id, VariableId::Local(id));
-                        }
+                Some(id) => match id {
+                    VariableId::Global(id) => {
+                        ctx.variables.insert(expr.id, VariableId::Global(id));
                     }
-                }
+                    VariableId::Local(id) => {
+                        ctx.variables.insert(expr.id, VariableId::Local(id));
+                    }
+                },
                 None => {
                     self.error(
                         format!(

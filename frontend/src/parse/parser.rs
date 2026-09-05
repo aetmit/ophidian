@@ -2,8 +2,7 @@ use crate::analysis::types::Type;
 use crate::lex::token::{TokenKind, TokenStream};
 use crate::parse::Parser;
 use crate::parse::ast::{
-    BinOpKind, Block, Expr, ExprKind, ExprStmt, For, ForInit, Function, GlobalVarDecl, If, Item,
-    LitKind, Param, Print, Program, Stmt, StmtKind, UnaryOpKind, VarDecl, While,
+    BinOpKind, Block, Expr, ExprKind, ExprStmt, For, ForInit, ForInitKind, Function, GlobalVarDecl, If, Item, LitKind, Param, Print, Program, Stmt, StmtKind, UnaryOpKind, VarDecl, While,
 };
 use crate::span::{Span, Spanned};
 
@@ -266,15 +265,15 @@ impl<'src, 'diag, T: TokenStream> Parser<'src, 'diag, T> {
             // parse_statement guarenteed to parse a var decl because of TokenKind::Let
             let stmt = self.parse_statement();
             let span = stmt.span;
-            Some(Box::new(ForInit::Decl(Spanned::new(
+            Some(Box::new(ForInit::new(ForInitKind::Decl(Spanned::new(
                 stmt.try_into().expect("unreacheable"),
                 span,
-            ))))
+            )), self.next_node_id())))
         } else if self.peek().kind == TokenKind::Semicolon {
             self.advance();
             None
         } else {
-            let val = Some(Box::new(ForInit::Expr(self.parse_expression())));
+            let val = Some(Box::new(ForInit::new(ForInitKind::Expr(self.parse_expression()), self.next_node_id())));
             if self.peek().kind != TokenKind::Semicolon {
                 self.error("expected ';' after loop initializer", self.peek().span);
                 return Stmt::new(self.next_node_id(), StmtKind::Error, self.peek().span);
