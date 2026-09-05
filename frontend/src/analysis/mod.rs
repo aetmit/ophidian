@@ -27,11 +27,11 @@ impl<'diag> SemanticAnalyzer<'diag> {
         Self { diagnostics }
     }
 
-    pub fn analyze(&mut self, program: &ast::Program) -> Result<hir::Program, ()> {
+    pub fn analyze(&mut self, program: ast::Program) -> Result<hir::Program, ()> {
         let mut ctx = AnalysisCtx::new(self.diagnostics);
 
         let mut collecter = Collecter::new();
-        collecter.collect(program, &mut ctx);
+        collecter.collect(&program, &mut ctx);
 
         let mut function_analyzer = FunctionAnalyzer::new();
         function_analyzer.analyze(&program, &mut ctx);
@@ -41,7 +41,7 @@ impl<'diag> SemanticAnalyzer<'diag> {
         }
 
         let mut global_analyzer = GlobalVarAnalyzer::new();
-        global_analyzer.analyze_globals(program, &mut ctx);
+        global_analyzer.analyze_globals(&program, &mut ctx);
 
         for (id, value) in &ctx.types {
             if let Some(conversion_type) = ctx.conversions.get(id) {

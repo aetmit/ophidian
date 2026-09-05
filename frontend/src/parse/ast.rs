@@ -196,14 +196,12 @@ impl TryFrom<Spanned<ForInit>> for Stmt {
 
     fn try_from(value: Spanned<ForInit>) -> Result<Self, Self::Error> {
         match value.node.kind {
-            ForInitKind::Expr(_) => {
-                return Err(())
-            }
+            ForInitKind::Expr(_) => return Err(()),
             ForInitKind::Decl(decl) => {
                 return Ok(Self {
                     id: value.node.id,
                     span: decl.span,
-                    kind: StmtKind::VarDecl(decl.node) 
+                    kind: StmtKind::VarDecl(decl.node),
                 });
             }
         }

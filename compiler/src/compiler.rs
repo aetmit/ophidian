@@ -59,7 +59,7 @@ impl Compiler {
         }
 
         let mut analyzer = SemanticAnalyzer::new(&mut diagnostics);
-        let metadata = analyzer.analyze(&program);
+        let metadata = analyzer.analyze(program);
 
         if !diagnostics.is_empty() {
             return Err(diagnostics);

@@ -1,6 +1,6 @@
 use macros::Constructor;
 
-use crate::analysis::ids::{FunctionId, GlobalVarId, HirId, LocalVarId};
+use crate::analysis::ids::{FunctionId, GlobalVarId, HirId, LocalVarId, VariableId};
 use crate::analysis::types::Type;
 
 #[derive(Debug, PartialEq, Clone, Constructor)]
@@ -119,12 +119,12 @@ pub enum LiteralKind {
     Bool(bool),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Literal {
     pub kind: LiteralKind,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct BinaryOp {
     pub kind: BinaryOpKind,
     pub left: Box<Expr>,
@@ -150,7 +150,7 @@ pub enum BinaryOpKind {
     Or,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct UnaryOp {
     pub kind: UnaryOpKind,
     pub operand: Box<Expr>,
@@ -167,19 +167,18 @@ pub enum UnaryOpKind {
     PostDecrement,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Variable {
-    Local(LocalVarId),
-    Global(GlobalVarId),
+#[derive(Debug, PartialEq, Clone, Constructor)]
+pub struct Variable {
+    id: VariableId,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct VarAssign {
     pub target: Box<Expr>,
     pub value: Box<Expr>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Call {
     pub callee: Box<Expr>,
     pub args: Vec<Expr>,
@@ -195,7 +194,7 @@ pub enum ExprKind {
     Call(Call),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Expr {
     pub kind: ExprKind,
     pub id: HirId,

@@ -2,7 +2,8 @@ use crate::analysis::AnalysisCtx;
 use crate::diagnostics::{Diagnostic, Severity};
 use crate::lex::token::TokenKind;
 use crate::parse::ast::{
-    BinOpKind, Expr, ExprKind, ForInit, ForInitKind, LitKind, NodeId, Stmt, StmtKind, UnaryOpKind, VarDecl,
+    BinOpKind, Expr, ExprKind, ForInit, ForInitKind, LitKind, NodeId, Stmt, StmtKind, UnaryOpKind,
+    VarDecl,
 };
 use crate::span::{Span, Spanned};
 
@@ -322,7 +323,7 @@ impl TypeChecker {
             ForInitKind::Decl(decl) => {
                 let spanned = Spanned::new(init.clone(), decl.span);
                 let stmt: Stmt = spanned.try_into().unwrap();
-                self.check_vardecl(&stmt, &decl.node, ctx); 
+                self.check_vardecl(&stmt, &decl.node, ctx);
             }
             ForInitKind::Expr(expr) => {
                 self.check_expr(&expr, ctx);
