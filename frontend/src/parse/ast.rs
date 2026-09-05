@@ -191,6 +191,25 @@ pub struct ForInit {
     pub id: NodeId,
 }
 
+impl TryFrom<Spanned<ForInit>> for Stmt {
+    type Error = ();
+
+    fn try_from(value: Spanned<ForInit>) -> Result<Self, Self::Error> {
+        match value.node.kind {
+            ForInitKind::Expr(_) => {
+                return Err(())
+            }
+            ForInitKind::Decl(decl) => {
+                return Ok(Self {
+                    id: value.node.id,
+                    span: decl.span,
+                    kind: StmtKind::VarDecl(decl.node) 
+                });
+            }
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Print {
     pub expr: Box<Expr>,

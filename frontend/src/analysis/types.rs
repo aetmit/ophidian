@@ -2,9 +2,9 @@ use crate::analysis::AnalysisCtx;
 use crate::diagnostics::{Diagnostic, Severity};
 use crate::lex::token::TokenKind;
 use crate::parse::ast::{
-    BinOpKind, Expr, ExprKind, ForInit, LitKind, NodeId, Stmt, StmtKind, UnaryOpKind, VarDecl,
+    BinOpKind, Expr, ExprKind, ForInit, ForInitKind, LitKind, NodeId, Stmt, StmtKind, UnaryOpKind, VarDecl,
 };
-use crate::span::Span;
+use crate::span::{Span, Spanned};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
@@ -318,9 +318,13 @@ impl TypeChecker {
     }
 
     fn check_forinit(&mut self, init: &ForInit, ctx: &mut AnalysisCtx) {
-        match init.kind {
-            ForInit::Decl(decl) => {}
-            ForInit::Expr(expr) => {
+        match &init.kind {
+            ForInitKind::Decl(decl) => {
+                let spanned = Spanned::new(init.clone(), decl.span);
+                let stmt: Stmt = spanned.try_into().unwrap();
+                self.check_vardecl(&stmt, &decl.node, ctx); 
+            }
+            ForInitKind::Expr(expr) => {
                 self.check_expr(&expr, ctx);
             }
         }
