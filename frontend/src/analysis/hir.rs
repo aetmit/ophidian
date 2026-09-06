@@ -50,12 +50,12 @@ pub struct Print {
     pub expr: Expr,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct ExprStmt {
     pub expr: Expr,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct VarDecl {
     pub id: LocalVarId,
     pub ty: Type,
@@ -76,7 +76,7 @@ pub struct While {
     pub body: Box<Stmt>,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct For {
     pub init: Option<ForInit>,
     pub condition: Option<Expr>,
@@ -85,9 +85,15 @@ pub struct For {
 }
 
 #[derive(Debug, PartialEq, Clone, Hir)]
-pub enum ForInit {
+pub enum ForInitKind {
     Expr(Expr),
     Decl(VarDecl),
+}
+
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
+pub struct ForInit {
+    kind: ForInitKind,
+    id: HirId,
 }
 
 #[derive(Debug, PartialEq, Clone, Hir)]

@@ -1,7 +1,7 @@
 use crate::analysis::AnalysisCtx;
 use crate::analysis::hir::{self, Hir};
-use crate::analysis::ids::HirId;
-use crate::parse::ast::{self, Ast};
+use crate::analysis::ids::{HirId, VariableId};
+use crate::parse::ast::{self, Ast, NodeId};
 
 pub struct Lowerer {
     curr_hirid: HirId,
@@ -10,19 +10,24 @@ pub struct Lowerer {
 struct LowerState<'ctx, 'instance, 'diag> {
     instance: &'instance mut Lowerer,
     ctx: &'ctx mut AnalysisCtx<'diag>,
+    id: Option<NodeId>,
 }
 
 impl<'ctx, 'instance, 'diag> LowerState<'ctx, 'instance, 'diag> {
-    pub fn new(instance: &'instance mut Lowerer, ctx: &'ctx mut AnalysisCtx<'diag>) -> Self {
-        Self { instance, ctx }
+    pub fn new(
+        instance: &'instance mut Lowerer,
+        ctx: &'ctx mut AnalysisCtx<'diag>,
+        id: Option<NodeId>,
+    ) -> Self {
+        Self { instance, ctx, id }
     }
 }
 
 pub trait LowerTo<T>
-where 
+where
     Self: Ast,
-    T: Hir {
-
+    T: Hir,
+{
     fn lower(self, state: &mut LowerState) -> T;
 }
 
@@ -64,7 +69,7 @@ impl Lowerer {
     }
 
     fn lower_stmt(&mut self, stmt: ast::Stmt, ctx: &mut AnalysisCtx) -> hir::Stmt {
-        let mut state = LowerState::new(self, ctx);
+        let mut state = LowerState::new(self, ctx, Some(stmt.id));
         match stmt.kind {
             ast::StmtKind::Block(body) => {
                 let block = body.lower(&mut state);
@@ -87,16 +92,27 @@ impl Lowerer {
                 unreachable!()
             }
             ast::StmtKind::ExprStmt(expr) => {
+                let expr = expr.lower(&mut state);
 
+                let kind = hir::StmtKind::ExprStmt(expr);
+
+                return hir::Stmt::new(kind, self.next_hirid());
+            }
+            ast::StmtKind::For(for_loop) => {
+                let for_loop = for_loop.lower(&mut state);
+
+                let kind = hir::StmtKind::For(for_loop);
+
+                return hir::Stmt::new(kind, self.next_hirid());
             }
         }
     }
 
     fn lower_expr(&mut self, expr: ast::Expr, ctx: &mut AnalysisCtx) -> hir::Expr {
-        let mut state = LowerState::new(self, ctx);
+        let mut state = LowerState::new(self, ctx, Some(expr.id));
         match expr.kind {
             ast::ExprKind::BinaryOp(op, lhs, rhs) => {
-                let binopkind = op.node.lower(ctx);
+                let binopkind = op.node.lower(&mut state);
                 let lhs = self.lower_expr(*lhs, ctx);
                 let rhs = self.lower_expr(*rhs, ctx);
                 let binop = hir::BinaryOp::new(binopkind, Box::new(lhs), Box::new(rhs));
@@ -109,10 +125,10 @@ impl Lowerer {
             ast::ExprKind::Call(callee, args) => {
                 let expr_hir = self.lower_expr(*callee, ctx);
 
-
-                let hir_args: Vec<hir::Expr> = args.into_iter().map(|arg| {
-                    self.lower_expr(arg, ctx)
-                }).collect();
+                let hir_args: Vec<hir::Expr> = args
+                    .into_iter()
+                    .map(|arg| self.lower_expr(arg, ctx))
+                    .collect();
 
                 let call = hir::Call::new(Box::new(expr_hir), hir_args);
 
@@ -143,7 +159,7 @@ impl Lowerer {
 
                 let ty = *ctx.types.get(&expr.id).unwrap();
 
-                return hir::Expr::new(kind, self.next_hirid(), ty)
+                return hir::Expr::new(kind, self.next_hirid(), ty);
             }
             ast::ExprKind::VarAssign(target, value) => {
                 let target = self.lower_expr(*target, ctx);
@@ -177,50 +193,112 @@ impl Lowerer {
     }
 }
 
+impl LowerTo<hir::For> for ast::For {
+    fn lower(self, state: &mut LowerState) -> hir::For {
+        let condition = if let Some(condition) = self.condition {
+            Some(state.instance.lower_expr(condition, state.ctx))
+        } else {
+            None
+        };
+
+        let increment = if let Some(increment) = self.increment {
+            Some(state.instance.lower_expr(increment, state.ctx))
+        } else {
+            None
+        };
+
+        let init = if let Some(init) = self.init {
+            let kind = init.kind.lower(state);
+            let id = state.instance.next_hirid();
+            Some(hir::ForInit::new(kind, id))
+        } else {
+            None
+        };
+
+        let body = state.instance.lower_stmt(*self.body, state.ctx);
+
+        return hir::For::new(init, condition, increment, Box::new(body));
+    }
+}
+
+impl LowerTo<hir::ForInitKind> for ast::ForInitKind {
+    fn lower(self, state: &mut LowerState) -> hir::ForInitKind {
+        match self {
+            ast::ForInitKind::Decl(decl) => {
+                let decl = decl.node.lower(state);
+                return hir::ForInitKind::Decl(decl);
+            }
+            ast::ForInitKind::Expr(expr) => {
+                let expr = state.instance.lower_expr(expr, state.ctx);
+                return hir::ForInitKind::Expr(expr);
+            }
+        }
+    }
+}
+
+impl LowerTo<hir::VarDecl> for ast::VarDecl {
+    fn lower(self, state: &mut LowerState) -> hir::VarDecl {
+        let nodeid = state.id.unwrap_or_else(|| unreachable!());
+        let id = *state.ctx.variables.get(&nodeid).unwrap();
+        let id = match id {
+            VariableId::Global(_) => {
+                unreachable!()
+            }
+            VariableId::Local(id) => {
+                id
+            }
+        };
+
+        let ty = *state.ctx.types.get(&nodeid).unwrap();
+
+        let init = if let Some(init) = self.init {
+            Some(state.instance.lower_expr(init, state.ctx))
+        } else {
+            None
+        };
+
+        return hir::VarDecl::new(id, ty, init);
+    }
+}
+
+impl LowerTo<hir::ExprStmt> for ast::ExprStmt {
+    fn lower(self, state: &mut LowerState) -> hir::ExprStmt {
+        let expr = state.instance.lower_expr(*self.expr, state.ctx);
+
+        return hir::ExprStmt::new(expr);
+    }
+}
+
 impl LowerTo<hir::Block> for ast::Block {
     fn lower(self, state: &mut LowerState) -> hir::Block {
-        let body: Vec<_>  = self.body.into_iter().map(|s| {
-            state.instance.lower_stmt(s, state.ctx)            
-        }).collect();
+        let body: Vec<_> = self
+            .body
+            .into_iter()
+            .map(|s| state.instance.lower_stmt(s, state.ctx))
+            .collect();
 
-        hir::Block::new(body)
+        return hir::Block::new(body);
     }
 }
 
 impl LowerTo<hir::UnaryOpKind> for ast::UnaryOpKind {
     fn lower(self, _state: &mut LowerState) -> hir::UnaryOpKind {
         match self {
-            ast::UnaryOpKind::Negate => {
-                hir::UnaryOpKind::Negate
-            }
-            ast::UnaryOpKind::PostDecrement => {
-                hir::UnaryOpKind::PostDecrement
-            }
-            ast::UnaryOpKind::PostIncrement => {
-                hir::UnaryOpKind::PostIncrement
-            }
-            ast::UnaryOpKind::PreDecrement => {
-                hir::UnaryOpKind::PreDecrement
-            }
-            ast::UnaryOpKind::PreIncrement =>{ 
-                hir::UnaryOpKind::PreIncrement
-            }
+            ast::UnaryOpKind::Negate => hir::UnaryOpKind::Negate,
+            ast::UnaryOpKind::PostDecrement => hir::UnaryOpKind::PostDecrement,
+            ast::UnaryOpKind::PostIncrement => hir::UnaryOpKind::PostIncrement,
+            ast::UnaryOpKind::PreDecrement => hir::UnaryOpKind::PreDecrement,
+            ast::UnaryOpKind::PreIncrement => hir::UnaryOpKind::PreIncrement,
         }
-    } 
+    }
 }
 
 impl LowerTo<hir::LiteralKind> for ast::LitKind {
     fn lower(self, _state: &mut LowerState) -> hir::LiteralKind {
         match self {
-            Self::Bool(b) => {
-                hir::LiteralKind::Bool(b)
-            }
-            Self::Float(f) => {
-                hir::LiteralKind::Float(f)
-            }
-            Self::Int(i) => { 
-                hir::LiteralKind::Int(i as i32)
-            }
+            Self::Bool(b) => hir::LiteralKind::Bool(b),
+            Self::Float(f) => hir::LiteralKind::Float(f),
+            Self::Int(i) => hir::LiteralKind::Int(i as i32),
         }
     }
 }
