@@ -1,7 +1,7 @@
 use crate::analysis::types::Type;
 use crate::lex::token::{Token, TokenKind};
 use crate::span::{Span, Spanned};
-use macros::Constructor;
+use macros::{Ast, Constructor};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NodeId(pub usize);
@@ -24,14 +24,18 @@ impl std::ops::AddAssign<usize> for NodeId {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+// marker trait that tells the user that the type they are working with is
+// part of the ast
+pub trait Ast {}
+
+#[derive(Debug, PartialEq, Clone, Ast)]
 pub enum LitKind {
     Int(u128),
     Float(f64),
     Bool(bool),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Ast)]
 pub enum BinOpKind {
     Add,
     Sub,
@@ -92,7 +96,7 @@ impl From<Token> for BinOpKind {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Ast)]
 pub enum UnaryOpKind {
     Negate,
     // ++i
@@ -124,7 +128,7 @@ pub type BinOp = Spanned<BinOpKind>;
 pub type UnaryOp = Spanned<UnaryOpKind>;
 
 // all the different exprs in the language
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Ast)]
 pub enum ExprKind {
     // a literal
     // e.g. '1'
@@ -166,7 +170,7 @@ pub enum ExprKind {
 }
 
 // an expression
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Ast)]
 pub struct Expr {
     pub id: NodeId,
     pub kind: ExprKind,
@@ -179,13 +183,13 @@ impl Expr {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Ast)]
 pub enum ForInitKind {
     Expr(Expr),
     Decl(Spanned<VarDecl>),
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct ForInit {
     pub kind: ForInitKind,
     pub id: NodeId,
@@ -208,17 +212,17 @@ impl TryFrom<Spanned<ForInit>> for Stmt {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct Print {
     pub expr: Box<Expr>,
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct ExprStmt {
     pub expr: Box<Expr>,
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct VarDecl {
     pub name: Vec<u8>,
     pub type_annotation: Option<Type>,
@@ -236,20 +240,20 @@ impl TryFrom<Stmt> for VarDecl {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct If {
     pub condition: Box<Expr>,
     pub body: Box<Stmt>,
     pub else_body: Option<Box<Stmt>>,
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct While {
     pub condition: Box<Expr>,
     pub body: Box<Stmt>,
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct For {
     pub init: Option<Box<ForInit>>,
     pub condition: Option<Expr>,
@@ -257,12 +261,12 @@ pub struct For {
     pub body: Box<Stmt>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Ast)]
 pub struct Return {
     pub expr: Option<Expr>,
 }
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor, Ast)]
 pub struct Block {
     pub body: Vec<Stmt>,
 }
@@ -278,7 +282,7 @@ impl TryFrom<Stmt> for Block {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Ast)]
 pub enum StmtKind {
     // we have a built in print statement that is still called like a
     // function i.e. `print(expression);` requiring the parentheses
@@ -348,20 +352,14 @@ pub enum StmtKind {
     Error,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Ast, Constructor)]
 pub struct Stmt {
     pub id: NodeId,
     pub kind: StmtKind,
     pub span: Span,
 }
 
-impl Stmt {
-    pub const fn new(id: NodeId, kind: StmtKind, span: Span) -> Self {
-        Self { id, kind, span }
-    }
-}
-
-#[derive(Debug, PartialEq, Constructor)]
+#[derive(Debug, PartialEq, Constructor, Ast)]
 pub struct Function {
     pub id: NodeId,
     pub span: Span,
@@ -371,7 +369,7 @@ pub struct Function {
     pub body: Spanned<Block>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Ast, Constructor)]
 pub struct Param {
     pub span: Span,
     pub id: NodeId,
@@ -379,13 +377,7 @@ pub struct Param {
     pub ty: Type,
 }
 
-impl Param {
-    pub fn new(id: NodeId, name: Vec<u8>, ty: Type, span: Span) -> Self {
-        Self { span, id, name, ty }
-    }
-}
-
-#[derive(Debug, PartialEq, Constructor)]
+#[derive(Debug, PartialEq, Constructor, Ast)]
 pub struct GlobalVarDecl {
     pub id: NodeId,
     pub span: Span,
@@ -394,13 +386,13 @@ pub struct GlobalVarDecl {
     pub init: Option<Expr>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Ast)]
 pub enum Item {
     GlobalVarDecl(GlobalVarDecl),
     Function(Function),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Ast)]
 pub struct Program {
     pub items: Vec<Item>,
 }

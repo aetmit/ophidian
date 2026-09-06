@@ -3,6 +3,9 @@ use macros::Constructor;
 use crate::analysis::ids::{FunctionId, GlobalVarId, HirId, LocalVarId, VariableId};
 use crate::analysis::types::Type;
 
+// marker trait for hir
+pub trait Hir {}
+
 #[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Program {
     pub items: Vec<Item>,

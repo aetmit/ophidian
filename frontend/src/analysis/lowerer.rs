@@ -1,10 +1,14 @@
 use crate::analysis::AnalysisCtx;
 use crate::analysis::hir;
 use crate::analysis::ids::HirId;
-use crate::parse::ast;
+use crate::parse::ast::{self, Ast};
 
 pub struct Lowerer {
     curr_hirid: HirId,
+}
+
+pub trait Lower<T: Ast> {
+    fn lower(node: T, ctx: &mut AnalysisCtx) -> Self;
 }
 
 impl Lowerer {

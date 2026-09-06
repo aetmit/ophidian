@@ -245,10 +245,10 @@ impl<'src, 'diag, T: TokenStream> Parser<'src, 'diag, T> {
         };
 
         return Ok(Param::new(
+            start_span.join(end_span),
             self.next_node_id(),
             ident,
             ty,
-            start_span.join(end_span),
         ));
     }
 
