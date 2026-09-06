@@ -205,7 +205,7 @@ impl TypeChecker {
                 }
                 LitKind::Bool(_b) => Type::Bool,
                 LitKind::Float(_f) => {
-                    // no type checking needed here?
+                    // no type checking needed here
                     Type::Double
                 }
             },
