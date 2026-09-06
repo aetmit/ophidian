@@ -1,6 +1,7 @@
 mod addassign;
 mod ast;
 mod constructor;
+mod hir;
 
 use proc_macro::TokenStream;
 
@@ -17,4 +18,9 @@ pub fn add_assign(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Ast)]
 pub fn ast(input: TokenStream) -> TokenStream {
     ast::expand(input)
+}
+
+#[proc_macro_derive(Hir)]
+pub fn hir(input: TokenStream) -> TokenStream {
+    hir::expand(input)
 }
