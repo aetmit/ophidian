@@ -118,10 +118,18 @@ impl Lowerer {
                 return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::Return(ret) => {
-                todo!()
+                let ret = ret.lower(&mut state);
+
+                let kind = hir::StmtKind::Return(ret);
+                
+                return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::VarDecl(decl) => {
-                todo!()
+                let decl = decl.lower(&mut state);
+
+                let kind = hir::StmtKind::VarDecl(decl);
+
+                return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::While(while_loop) => {
                 todo!()
@@ -211,6 +219,18 @@ impl Lowerer {
         let id = self.curr_hirid;
         self.curr_hirid += 1;
         id
+    }
+}
+
+impl LowerTo<hir::Return> for ast::Return {
+    fn lower(self, state: &mut LowerState) -> hir::Return {
+        let expr = if let Some(expr) = self.expr {
+            Some(state.instance.lower_expr(expr, state.ctx))
+        } else {
+            None
+        };
+
+        return hir::Return::new(expr);
     }
 }
 

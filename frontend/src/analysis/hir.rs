@@ -96,7 +96,7 @@ pub struct ForInit {
     id: HirId,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct Return {
     pub value: Option<Expr>,
 }
