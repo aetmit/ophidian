@@ -80,10 +80,10 @@ impl Compiler {
         for item in &program.items {
             match item {
                 Item::Function(function) => {
-                    self.compile_fn(function, &mut chunk);
+                    self.compile_fn(function, chunk);
                 }
                 Item::GlobalVarDecl(decl) => {
-                    self.compile_gloval_var_decl(decl, &mut chunk);
+                    self.compile_gloval_var_decl(decl, chunk);
                 }
             }
         }
@@ -113,7 +113,7 @@ impl Compiler {
             StmtKind::Print(print) => {
                 self.compile_expr(&print.expr, chunk);
 
-                match metadata.converted_types.get(&expr.id).unwrap() {
+                match print.expr.ty {
                     Type::Int => {
                         chunk.write(OpCode::I32Print as u8);
                     }
@@ -211,7 +211,7 @@ impl Compiler {
 
                 self.compile_stmt(&if_stmt.body, chunk);
 
-                if let Some(else_body) = if_stmt.else_clause {
+                if let Some(else_body) = &if_stmt.else_clause {
                     let end_jump = chunk.write_jump(OpCode::Jmp);
 
                     chunk.patch_jump(pos);
@@ -252,10 +252,10 @@ impl Compiler {
                 }
             }
             StmtKind::For(for_loop) => {
-                if let Some(init) = for_loop.init {
-                    match init.kind {
+                if let Some(init) = &for_loop.init {
+                    match &init.kind {
                         ForInitKind::Decl(decl) => {
-                            self.compile_stmt(&decl.into_stmt(init.id), chunk);
+                            self.compile_stmt(&decl.clone().into_stmt(init.id), chunk);
                         }
                         ForInitKind::Expr(expr) => {
                             self.compile_expr(&expr, chunk);
@@ -264,7 +264,7 @@ impl Compiler {
                 }
 
                 let loop_start = chunk.bytecode.len();
-                let jump_out = if let Some(cond) = for_loop.condition {
+                let jump_out = if let Some(cond) = &for_loop.condition {
                     self.compile_expr(&cond, chunk);
 
                     Some(chunk.write_jump(OpCode::JmpFalse))
@@ -351,7 +351,7 @@ impl Compiler {
                 }
 
                 match binop.kind {
-                    BinaryOpKind::Add => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Add => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Add as u8);
                         }
@@ -365,7 +365,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinaryOpKind::Sub => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Sub => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Sub as u8);
                         }
@@ -379,7 +379,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinaryOpKind::Mul => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Mul => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Mul as u8);
                         }
@@ -393,7 +393,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinaryOpKind::Div => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Div => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Div as u8);
                         }
@@ -407,7 +407,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinaryOpKind::BangEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::BangEq => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32NEqual as u8);
                         }
@@ -422,7 +422,7 @@ impl Compiler {
                         }
                         Type::Error => unreachable!(),
                     },
-                    BinaryOpKind::EqEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::EqEq => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Equal as u8);
                         }
@@ -437,7 +437,7 @@ impl Compiler {
                         }
                         Type::Error => unreachable!(),
                     },
-                    BinaryOpKind::GreaterEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::GreaterEq => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32GreaterEq as u8);
                         }
@@ -449,8 +449,7 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinaryOpKind::GreaterThan => match metadata.converted_types.get(&left.id).unwrap()
-                    {
+                    BinaryOpKind::GreaterThan => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Greater as u8);
                         }
@@ -462,7 +461,7 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinaryOpKind::LessEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::LessEq => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32LessEq as u8);
                         }
@@ -474,7 +473,7 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinaryOpKind::LessThan => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::LessThan => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Less as u8);
                         }
@@ -513,7 +512,7 @@ impl Compiler {
                 self.compile_expr(&unary.operand, chunk);
 
                 match unary.kind {
-                    UnaryOpKind::Negate => match metadata.converted_types.get(&right.id).unwrap() {
+                    UnaryOpKind::Negate => match expr.ty {
                         Type::Int => {
                             chunk.write(OpCode::I32Negate as u8);
                         }
@@ -528,7 +527,7 @@ impl Compiler {
                         }
                     },
                     UnaryOpKind::PostDecrement => {
-                        match metadata.converted_types.get(&right.id).unwrap() {
+                        match expr.ty {
                             Type::Int => {
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::LoadConst as u8);
