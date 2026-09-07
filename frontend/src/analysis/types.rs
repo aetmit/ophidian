@@ -334,7 +334,8 @@ impl TypeChecker {
     fn is_callable(&self, node: &Expr) -> bool {
         // so functions dont yet exist as first class objects therefore
         // there is no function type so this function cannot be implemented yet
-        todo!()
+        // just say true for now
+        true
     }
 
     fn is_lvalue(&self, node: &Expr) -> bool {
