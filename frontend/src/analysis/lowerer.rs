@@ -125,7 +125,7 @@ impl Lowerer {
                 let ret = ret.lower(&mut state);
 
                 let kind = hir::StmtKind::Return(ret);
-                
+
                 return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::VarDecl(decl) => {
@@ -238,20 +238,23 @@ impl LowerTo<hir::Function> for ast::Function {
         let sig = state.ctx.signatures.get(&fn_id).unwrap();
         let return_type = sig.return_type;
 
-        let params = self.params.into_iter().map(|param| {
-            let mut state = LowerState::new(state.instance, state.ctx, Some(param.id));
-            param.lower(&mut state)
-        }).collect();
+        let params = self
+            .params
+            .into_iter()
+            .map(|param| {
+                let mut state = LowerState::new(state.instance, state.ctx, Some(param.id));
+                param.lower(&mut state)
+            })
+            .collect();
 
         let body = self.body.node.lower(state);
 
-
         return hir::Function::new(
-            state.instance.next_hirid(), 
-            fn_id, 
-            return_type, 
-            params, 
-            body
+            state.instance.next_hirid(),
+            fn_id,
+            return_type,
+            params,
+            body,
         );
     }
 }
@@ -265,9 +268,7 @@ impl LowerTo<hir::Param> for ast::Param {
             VariableId::Global(_) => {
                 unreachable!()
             }
-            VariableId::Local(i) => {
-                i
-            }
+            VariableId::Local(i) => i,
         };
 
         let ty = *state.ctx.var_types.get(&varid).unwrap();
@@ -373,9 +374,7 @@ impl LowerTo<hir::VarDecl> for ast::VarDecl {
             VariableId::Global(_) => {
                 unreachable!()
             }
-            VariableId::Local(id) => {
-                id
-            }
+            VariableId::Local(id) => id,
         };
 
         let ty = *state.ctx.types.get(&nodeid).unwrap();
