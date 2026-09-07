@@ -190,6 +190,7 @@ pub struct VarAssign {
 #[derive(Debug, PartialEq, Clone, Constructor, Hir)]
 pub struct Call {
     pub callee: Box<Expr>,
+    pub function: FunctionId,
     pub args: Vec<Expr>,
 }
 

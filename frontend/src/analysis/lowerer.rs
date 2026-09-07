@@ -167,7 +167,9 @@ impl Lowerer {
                     .map(|arg| self.lower_expr(arg, ctx))
                     .collect();
 
-                let call = hir::Call::new(Box::new(expr_hir), hir_args);
+                let function = *ctx.calls.get(&expr.id).unwrap();
+
+                let call = hir::Call::new(Box::new(expr_hir), function, hir_args);
 
                 let kind = hir::ExprKind::Call(call);
 
