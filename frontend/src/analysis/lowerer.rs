@@ -396,15 +396,15 @@ impl LowerTo<hir::ForInitKind> for ast::ForInitKind {
 impl LowerTo<hir::VarDecl> for ast::VarDecl {
     fn lower(self, state: &mut LowerState) -> hir::VarDecl {
         let nodeid = state.id.unwrap_or_else(|| unreachable!());
-        let id = *state.ctx.variables.get(&nodeid).unwrap();
-        let id = match id {
+        let varid = *state.ctx.variables.get(&nodeid).unwrap();
+        let id = match varid {
             VariableId::Global(_) => {
                 unreachable!()
             }
             VariableId::Local(id) => id,
         };
 
-        let ty = *state.ctx.types.get(&nodeid).unwrap();
+        let ty = *state.ctx.var_types.get(&varid).unwrap();
 
         let init = if let Some(init) = self.init {
             Some(state.instance.lower_expr(init, state.ctx))
