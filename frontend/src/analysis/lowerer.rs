@@ -132,7 +132,11 @@ impl Lowerer {
                 return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::While(while_loop) => {
-                todo!()
+                let while_loop = while_loop.lower(&mut state);
+
+                let kind = hir::StmtKind::While(while_loop);
+
+                return hir::Stmt::new(kind, self.next_hirid());
             }
         }
     }
@@ -219,6 +223,16 @@ impl Lowerer {
         let id = self.curr_hirid;
         self.curr_hirid += 1;
         id
+    }
+}
+
+impl LowerTo<hir::While> for ast::While {
+    fn lower(self, state: &mut LowerState) -> hir::While {
+        let condition = state.instance.lower_expr(*self.condition, state.ctx);
+
+        let body = state.instance.lower_stmt(*self.body, state.ctx);
+
+        return hir::While::new(condition, Box::new(body));
     }
 }
 

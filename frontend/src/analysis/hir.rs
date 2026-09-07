@@ -70,7 +70,7 @@ pub struct If {
     pub else_clause: Option<Box<Stmt>>,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct While {
     pub condition: Expr,
     pub body: Box<Stmt>,
