@@ -43,7 +43,6 @@ impl<'diag> SemanticAnalyzer<'diag> {
             return Err(());
         }
 
-
         for (id, value) in &ctx.types {
             if let Some(conversion_type) = ctx.conversions.get(id) {
                 match conversion_type {

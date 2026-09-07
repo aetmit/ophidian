@@ -1,6 +1,7 @@
 use crate::analysis::AnalysisCtx;
 use crate::analysis::hir::{self, Hir};
 use crate::analysis::ids::{HirId, VariableId};
+use crate::analysis::types::{Conversion, Type};
 use crate::parse::ast::{self, Ast, NodeId};
 
 pub struct Lowerer {
@@ -147,7 +148,7 @@ impl Lowerer {
 
     fn lower_expr(&mut self, expr: ast::Expr, ctx: &mut AnalysisCtx) -> hir::Expr {
         let mut state = LowerState::new(self, ctx, Some(expr.id));
-        match expr.kind {
+        let hir_expr = match expr.kind {
             ast::ExprKind::BinaryOp(op, lhs, rhs) => {
                 let binopkind = op.node.lower(&mut state);
                 let lhs = self.lower_expr(*lhs, ctx);
@@ -188,7 +189,7 @@ impl Lowerer {
 
                 let kind = hir::ExprKind::Literal(literal);
 
-                return hir::Expr::new(kind, self.next_hirid(), ty);
+                hir::Expr::new(kind, self.next_hirid(), ty)
             }
             ast::ExprKind::UnaryOp(op, operand) => {
                 let unaryopkind = op.node.lower(&mut state);
@@ -198,7 +199,7 @@ impl Lowerer {
 
                 let ty = *ctx.types.get(&expr.id).unwrap();
 
-                return hir::Expr::new(kind, self.next_hirid(), ty);
+                hir::Expr::new(kind, self.next_hirid(), ty)
             }
             ast::ExprKind::VarAssign(target, value) => {
                 let target = self.lower_expr(*target, ctx);
@@ -222,6 +223,30 @@ impl Lowerer {
 
                 hir::Expr::new(kind, self.next_hirid(), ty)
             }
+        };
+
+        if let Some(conversion) = ctx.conversions.get(&expr.id) {
+            match conversion {
+                Conversion::IntToDouble => {
+                    let hir_conversion =
+                        hir::Conversion::new(hir::ConversionKind::IntToDouble, Box::new(hir_expr));
+                    let kind = hir::ExprKind::Conversion(hir_conversion);
+
+                    return hir::Expr::new(
+                        kind,
+                        self.next_hirid(),
+                        self.get_conversion_type(conversion),
+                    );
+                }
+            }
+        }
+
+        hir_expr
+    }
+
+    fn get_conversion_type(&self, conversion: &Conversion) -> Type {
+        match conversion {
+            Conversion::IntToDouble => Type::Double,
         }
     }
 
