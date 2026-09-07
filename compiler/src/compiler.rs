@@ -1,14 +1,11 @@
 use cli::options::Options;
 use frontend::analysis::SemanticAnalyzer;
-use frontend::analysis::analyzer::AnalysisResult;
-use frontend::analysis::resolution::VarId;
-use frontend::analysis::types::{Conversion, Type};
+use frontend::analysis::types::Type;
 use frontend::diagnostics::Diagnostic;
 use frontend::lex::Lexer;
 use frontend::parse::Parser;
-use frontend::parse::ast::{
-    BinOpKind, Expr, ExprKind, ForInit, LitKind, Stmt, StmtKind, UnaryOpKind,
-};
+use frontend::analysis::hir::{BinaryOpKind, Expr, ExprKind, ForInit, ForInitKind, Function, GlobalVarDecl, Item, LiteralKind, Program, Stmt, StmtKind, UnaryOpKind};
+use frontend::analysis::ids::LocalVarId;
 use runtime::chunk::Chunk;
 use runtime::disassembler::Disassembler;
 use runtime::opcodes::OpCode;
@@ -34,7 +31,7 @@ pub struct LoopContext {
 }
 
 pub struct Compiler {
-    locals: HashMap<VarId, LocalSlot>,
+    locals: HashMap<LocalVarId, LocalSlot>,
     loop_stack: Vec<LoopContext>,
 }
 
@@ -59,25 +56,17 @@ impl Compiler {
         }
 
         let mut analyzer = SemanticAnalyzer::new(&mut diagnostics);
-        let metadata = analyzer.analyze(program);
+        let hir = analyzer.analyze(program);
 
         if !diagnostics.is_empty() {
             return Err(diagnostics);
         }
 
-        let metadata = metadata.unwrap();
+        let hir = hir.unwrap();
 
         let mut chunk = Chunk::new();
 
-        for stmt in &program.decls {
-            self.compile_stmt(stmt, &mut chunk, &metadata);
-        }
-
-        chunk.write(OpCode::LoadConst as u8);
-        let idx = chunk.write_constant(Value::new_int(0));
-        chunk.write_u24(idx as u32);
-
-        chunk.write(OpCode::Halt as u8);
+        self.compile_program(&hir, &mut chunk);        
 
         if options.dump_bytecode {
             let disassembler = Disassembler::new(&chunk);
@@ -87,15 +76,42 @@ impl Compiler {
         Ok(chunk)
     }
 
-    fn compile_stmt(&mut self, stmt: &Stmt, chunk: &mut Chunk, metadata: &AnalysisResult) {
+    fn compile_program(&mut self, program: &Program, chunk: &mut Chunk) {
+        for item in &program.items {
+            match item {
+                Item::Function(function) => {
+                    self.compile_fn(function, &mut chunk);
+                }
+                Item::GlobalVarDecl(decl) => {
+                    self.compile_gloval_var_decl(decl, &mut chunk);
+                }
+            }
+        }
+
+        chunk.write(OpCode::LoadConst as u8);
+        let idx = chunk.write_constant(Value::new_int(0));
+        chunk.write_u24(idx as u32);
+
+        chunk.write(OpCode::Halt as u8);
+    }
+
+    fn compile_fn(&mut self, function: &Function, chunk: &mut Chunk) {
+
+    }
+
+    fn compile_gloval_var_decl(&mut self, decl: &GlobalVarDecl, chunk: &mut Chunk) {
+
+    }
+
+    fn compile_stmt(&mut self, stmt: &Stmt, chunk: &mut Chunk) {
         match &stmt.kind {
             StmtKind::ExprStmt(expr) => {
-                self.compile_expr(expr, chunk, metadata);
+                self.compile_expr(&expr.expr, chunk);
 
                 chunk.write(OpCode::Pop as u8);
             }
-            StmtKind::Print(expr) => {
-                self.compile_expr(expr, chunk, metadata);
+            StmtKind::Print(print) => {
+                self.compile_expr(&print.expr, chunk);
 
                 match metadata.converted_types.get(&expr.id).unwrap() {
                     Type::Int => {
@@ -115,31 +131,31 @@ impl Compiler {
                     }
                 }
             }
-            StmtKind::VarDecl(_name, _type_annotation, initialiser) => {
-                match initialiser {
+            StmtKind::VarDecl(vardecl )=> {
+                match &vardecl.init {
                     Some(init) => {
-                        self.compile_expr(init, chunk, metadata);
+                        self.compile_expr(init, chunk);
 
-                        let varid = *metadata.variables.get(&stmt.id).unwrap();
+                        let localid = vardecl.id;
 
-                        self.locals.insert(varid, LocalSlot(varid.0));
+                        self.locals.insert(localid, LocalSlot(localid.0));
 
-                        match metadata.var_types.get(&varid).unwrap() {
+                        match vardecl.ty {
                             Type::Int => {
                                 chunk.write(OpCode::I32StoreLocal as u8);
                                 chunk.write_u24(
-                                    varid.0.try_into().expect("hopefully this doesnt happen"),
+                                    localid.0.try_into().expect("varid exceeds u32::MAX"),
                                 );
                             }
                             Type::Bool => {
                                 chunk.write(OpCode::BStoreLocal as u8);
                                 chunk
-                                    .write_u24(varid.0.try_into().expect("varid exceeds u32::MAX"));
+                                    .write_u24(localid.0.try_into().expect("varid exceeds u32::MAX"));
                             }
                             Type::Double => {
                                 chunk.write(OpCode::F64StoreLocal as u8);
                                 chunk
-                                    .write_u24(varid.0.try_into().expect("varid exceeds u32::MAX"));
+                                    .write_u24(localid.0.try_into().expect("varid exceeds u32::MAX"));
                             }
                             Type::Void => {
                                 todo!()
@@ -151,7 +167,7 @@ impl Compiler {
                     }
                     None => {
                         // use of a variable before its given a value is UB
-                        let varid = *metadata.variables.get(&stmt.id).unwrap();
+                        let varid = vardecl.id;
 
                         self.locals.insert(varid, LocalSlot(varid.0));
 
@@ -159,7 +175,7 @@ impl Compiler {
                         let idx = chunk.write_constant(Value::UNINITIALIZED);
                         chunk.write_u24(idx as u32);
 
-                        match metadata.var_types.get(&varid).unwrap() {
+                        match vardecl.ty {
                             Type::Int => {
                                 chunk.write(OpCode::I32StoreLocal as u8);
                                 chunk
@@ -183,34 +199,34 @@ impl Compiler {
                     }
                 }
             }
-            StmtKind::Block(body) => {
-                for stmt in body {
-                    self.compile_stmt(stmt, chunk, metadata);
+            StmtKind::Block(block) => {
+                for stmt in &block.body {
+                    self.compile_stmt(stmt, chunk);
                 }
             }
-            StmtKind::If(cond, body, else_body) => {
-                self.compile_expr(cond, chunk, metadata);
+            StmtKind::If(if_stmt) => {
+                self.compile_expr(&if_stmt.condition, chunk);
 
                 let pos = chunk.write_jump(OpCode::JmpFalse);
 
-                self.compile_stmt(body, chunk, metadata);
+                self.compile_stmt(&if_stmt.body, chunk);
 
-                if let Some(else_body) = else_body {
+                if let Some(else_body) = if_stmt.else_clause {
                     let end_jump = chunk.write_jump(OpCode::Jmp);
 
                     chunk.patch_jump(pos);
 
-                    self.compile_stmt(else_body, chunk, metadata);
+                    self.compile_stmt(&else_body, chunk);
 
                     chunk.patch_jump(end_jump);
                 } else {
                     chunk.patch_jump(pos);
                 }
             }
-            StmtKind::While(cond, body) => {
+            StmtKind::While(while_loop) => {
                 let loop_start = chunk.bytecode.len();
 
-                self.compile_expr(cond, chunk, metadata);
+                self.compile_expr(&while_loop.condition, chunk);
 
                 let exit_jump = chunk.write_jump(OpCode::JmpFalse);
 
@@ -219,7 +235,7 @@ impl Compiler {
                     break_jumps: Vec::new(),
                 });
 
-                self.compile_stmt(body, chunk, metadata);
+                self.compile_stmt(&while_loop.body, chunk);
 
                 chunk.write_jump_back(OpCode::Jmp, loop_start);
 
@@ -235,21 +251,21 @@ impl Compiler {
                     chunk.patch_jump(jump);
                 }
             }
-            StmtKind::For(init, cond, incre, body) => {
-                if let Some(init) = init {
-                    match &**init {
-                        ForInit::Decl(decl) => {
-                            self.compile_stmt(decl, chunk, metadata);
+            StmtKind::For(for_loop) => {
+                if let Some(init) = for_loop.init {
+                    match init.kind {
+                        ForInitKind::Decl(decl) => {
+                            self.compile_stmt(&decl.into_stmt(init.id), chunk);
                         }
-                        ForInit::Expr(expr) => {
-                            self.compile_expr(expr, chunk, metadata);
+                        ForInitKind::Expr(expr) => {
+                            self.compile_expr(&expr, chunk);
                         }
                     }
                 }
 
                 let loop_start = chunk.bytecode.len();
-                let jump_out = if let Some(cond) = cond {
-                    self.compile_expr(cond, chunk, metadata);
+                let jump_out = if let Some(cond) = for_loop.condition {
+                    self.compile_expr(&cond, chunk);
 
                     Some(chunk.write_jump(OpCode::JmpFalse))
                 } else {
@@ -261,12 +277,12 @@ impl Compiler {
                     break_jumps: Vec::new(),
                 });
 
-                self.compile_stmt(body, chunk, metadata);
+                self.compile_stmt(&for_loop.body, chunk);
 
                 let continue_jump_pos = chunk.bytecode.len();
 
-                if let Some(incre) = incre {
-                    self.compile_expr(incre, chunk, metadata);
+                if let Some(incre) = &for_loop.increment {
+                    self.compile_expr(incre, chunk);
                 }
 
                 chunk.write_jump_back(OpCode::Jmp, loop_start);
@@ -300,47 +316,42 @@ impl Compiler {
             StmtKind::Return(expr) => {
                 todo!()
             }
-            StmtKind::Error => {
-                unreachable!()
-            }
         }
     }
 
-    fn compile_expr(&mut self, expr: &Expr, chunk: &mut Chunk, metadata: &AnalysisResult) {
+    fn compile_expr(&mut self, expr: &Expr, chunk: &mut Chunk) {
         match &expr.kind {
             ExprKind::Literal(litkind) => {
-                match litkind {
-                    LitKind::Int(i) => {
+                match litkind.kind {
+                    LiteralKind::Int(i) => {
                         // we convert to i32 here because Int means i32
-                        let value = Value::new_int(*i as i32);
+                        let value = Value::new_int(i as i32);
                         chunk.write(OpCode::LoadConst as u8);
                         let idx = chunk.write_constant(value);
                         chunk.write_u24(idx as u32);
                     }
-                    LitKind::Bool(b) => {
-                        let value = Value::new_bool(*b);
+                    LiteralKind::Bool(b) => {
+                        let value = Value::new_bool(b);
                         chunk.write(OpCode::LoadConst as u8);
                         let idx = chunk.write_constant(value);
                         chunk.write_u24(idx as u32);
                     }
-                    LitKind::Float(f) => {
-                        let value = Value::new_double(*f);
+                    LiteralKind::Float(f) => {
+                        let value = Value::new_double(f);
                         chunk.write(OpCode::LoadConst as u8);
                         let idx = chunk.write_constant(value);
                         chunk.write_u24(idx as u32);
                     }
                 }
             }
-            ExprKind::BinaryOp(op, left, right) => {
-                if !matches!(op.node, BinOpKind::And | BinOpKind::Or) {
-                    self.compile_expr(&left, chunk, metadata);
-                    self.compile_expr(&right, chunk, metadata);
+            ExprKind::BinaryOp(binop) => {
+                if !matches!(binop.kind, BinaryOpKind::And | BinaryOpKind::Or) {
+                    self.compile_expr(&binop.left, chunk,);
+                    self.compile_expr(&binop.right, chunk);
                 }
 
-                match op.node {
-                    // only type int exists rn so we dont needa
-                    // check for different types
-                    BinOpKind::Add => match metadata.converted_types.get(&expr.id).unwrap() {
+                match binop.kind {
+                    BinaryOpKind::Add => match metadata.converted_types.get(&expr.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Add as u8);
                         }
@@ -354,7 +365,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinOpKind::Sub => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Sub => match metadata.converted_types.get(&expr.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Sub as u8);
                         }
@@ -368,7 +379,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinOpKind::Mul => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Mul => match metadata.converted_types.get(&expr.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Mul as u8);
                         }
@@ -382,7 +393,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinOpKind::Div => match metadata.converted_types.get(&expr.id).unwrap() {
+                    BinaryOpKind::Div => match metadata.converted_types.get(&expr.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Div as u8);
                         }
@@ -396,7 +407,7 @@ impl Compiler {
                             unreachable!()
                         }
                     },
-                    BinOpKind::BangEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::BangEq => match metadata.converted_types.get(&left.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32NEqual as u8);
                         }
@@ -411,7 +422,7 @@ impl Compiler {
                         }
                         Type::Error => unreachable!(),
                     },
-                    BinOpKind::EqEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::EqEq => match metadata.converted_types.get(&left.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Equal as u8);
                         }
@@ -426,7 +437,7 @@ impl Compiler {
                         }
                         Type::Error => unreachable!(),
                     },
-                    BinOpKind::GreaterEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::GreaterEq => match metadata.converted_types.get(&left.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32GreaterEq as u8);
                         }
@@ -438,7 +449,7 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinOpKind::GreaterThan => match metadata.converted_types.get(&left.id).unwrap()
+                    BinaryOpKind::GreaterThan => match metadata.converted_types.get(&left.id).unwrap()
                     {
                         Type::Int => {
                             chunk.write(OpCode::I32Greater as u8);
@@ -451,7 +462,7 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinOpKind::LessEq => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::LessEq => match metadata.converted_types.get(&left.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32LessEq as u8);
                         }
@@ -463,7 +474,7 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinOpKind::LessThan => match metadata.converted_types.get(&left.id).unwrap() {
+                    BinaryOpKind::LessThan => match metadata.converted_types.get(&left.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Less as u8);
                         }
@@ -475,16 +486,16 @@ impl Compiler {
                         }
                         Type::Bool | Type::Error => unreachable!(),
                     },
-                    BinOpKind::And => {
-                        self.compile_expr(left, chunk, metadata);
+                    BinaryOpKind::And => {
+                        self.compile_expr(&binop.left, chunk);
                         chunk.write(OpCode::Dup as u8);
                         let pos = chunk.write_jump(OpCode::JmpFalse);
                         chunk.write(OpCode::Pop as u8);
-                        self.compile_expr(right, chunk, metadata);
+                        self.compile_expr(&binop.right, chunk);
                         chunk.patch_jump(pos);
                     }
-                    BinOpKind::Or => {
-                        self.compile_expr(left, chunk, metadata);
+                    BinaryOpKind::Or => {
+                        self.compile_expr(&binop.left, chunk);
 
                         chunk.write(OpCode::Dup as u8);
 
@@ -492,16 +503,16 @@ impl Compiler {
 
                         chunk.write(OpCode::Pop as u8);
 
-                        self.compile_expr(right, chunk, metadata);
+                        self.compile_expr(&binop.right, chunk);
 
                         chunk.patch_jump(pos);
                     }
                 };
             }
-            ExprKind::UnaryOp(op, right) => {
-                self.compile_expr(&right, chunk, metadata);
+            ExprKind::UnaryOp(unary) => {
+                self.compile_expr(&unary.operand, chunk);
 
-                match op.node {
+                match unary.kind {
                     UnaryOpKind::Negate => match metadata.converted_types.get(&right.id).unwrap() {
                         Type::Int => {
                             chunk.write(OpCode::I32Negate as u8);
@@ -658,9 +669,6 @@ impl Compiler {
                     }
                 };
             }
-            ExprKind::Error => {
-                unreachable!()
-            }
             ExprKind::VarAssign(target, value) => {
                 self.compile_expr(value, chunk, metadata);
 
@@ -718,7 +726,7 @@ impl Compiler {
                     .expect("overflow"),
                 );
             }
-            ExprKind::Call(callee, args) => {
+            ExprKind::Call(call) => {
                 todo!()
             }
         }

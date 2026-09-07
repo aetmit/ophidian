@@ -63,6 +63,12 @@ pub struct VarDecl {
     pub init: Option<Expr>,
 }
 
+impl VarDecl {
+    pub fn into_stmt(self, hir_id: HirId) -> Stmt {
+        Stmt::new(StmtKind::VarDecl(self), hir_id)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct If {
     pub condition: Expr,
@@ -92,8 +98,8 @@ pub enum ForInitKind {
 
 #[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct ForInit {
-    kind: ForInitKind,
-    id: HirId,
+    pub kind: ForInitKind,
+    pub id: HirId,
 }
 
 #[derive(Debug, PartialEq, Clone, Hir, Constructor)]
@@ -103,8 +109,8 @@ pub struct Return {
 
 #[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct Stmt {
-    kind: StmtKind,
-    id: HirId,
+    pub kind: StmtKind,
+    pub id: HirId,
 }
 
 #[derive(Debug, PartialEq, Clone, Hir)]
