@@ -195,6 +195,17 @@ pub struct Call {
 }
 
 #[derive(Debug, PartialEq, Clone, Hir)]
+pub enum ConversionKind {
+    IntToDouble,
+}
+
+#[derive(Debug, PartialEq, Clone, Constructor, Hir)]
+pub struct Conversion {
+    kind: ConversionKind,
+    operand: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Clone, Hir)]
 pub enum ExprKind {
     Literal(Literal),
     BinaryOp(BinaryOp),
@@ -202,6 +213,7 @@ pub enum ExprKind {
     Variable(Variable),
     VarAssign(VarAssign),
     Call(Call),
+    Conversion(Conversion),
 }
 
 #[derive(Debug, PartialEq, Clone, Constructor, Hir)]
