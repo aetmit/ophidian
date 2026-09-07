@@ -57,7 +57,11 @@ impl Lowerer {
     }
 
     fn lower_function(&mut self, function: ast::Function, ctx: &mut AnalysisCtx) -> hir::Function {
-        todo!()
+        let mut state = LowerState::new(self, ctx, Some(function.id));
+
+        let function = function.lower(&mut state);
+
+        function
     }
 
     fn lower_globalvardecl(
@@ -223,6 +227,52 @@ impl Lowerer {
         let id = self.curr_hirid;
         self.curr_hirid += 1;
         id
+    }
+}
+
+impl LowerTo<hir::Function> for ast::Function {
+    fn lower(self, state: &mut LowerState) -> hir::Function {
+        let nodeid = state.id.unwrap_or_else(|| panic!("internal error"));
+        let fn_id = *state.ctx.functions.get(&nodeid).unwrap();
+
+        let sig = state.ctx.signatures.get(&fn_id).unwrap();
+        let return_type = sig.return_type;
+
+        let params = self.params.into_iter().map(|param| {
+            let mut state = LowerState::new(state.instance, state.ctx, Some(param.id));
+            param.lower(&mut state)
+        }).collect();
+
+        let body = self.body.node.lower(state);
+
+
+        return hir::Function::new(
+            state.instance.next_hirid(), 
+            fn_id, 
+            return_type, 
+            params, 
+            body
+        );
+    }
+}
+
+impl LowerTo<hir::Param> for ast::Param {
+    fn lower(self, state: &mut LowerState) -> hir::Param {
+        let nodeid = state.id.unwrap_or_else(|| panic!("internal error"));
+        let varid = *state.ctx.variables.get(&nodeid).unwrap();
+
+        let id = match varid {
+            VariableId::Global(_) => {
+                unreachable!()
+            }
+            VariableId::Local(i) => {
+                i
+            }
+        };
+
+        let ty = *state.ctx.var_types.get(&varid).unwrap();
+
+        return hir::Param::new(id, ty);
     }
 }
 
