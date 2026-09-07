@@ -63,7 +63,7 @@ pub struct VarDecl {
     pub init: Option<Expr>,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct If {
     pub condition: Expr,
     pub body: Box<Stmt>,

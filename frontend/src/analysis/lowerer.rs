@@ -23,7 +23,7 @@ impl<'ctx, 'instance, 'diag> LowerState<'ctx, 'instance, 'diag> {
     }
 }
 
-pub trait LowerTo<T>
+trait LowerTo<T>
 where
     Self: Ast,
     T: Hir,
@@ -104,6 +104,25 @@ impl Lowerer {
                 let kind = hir::StmtKind::For(for_loop);
 
                 return hir::Stmt::new(kind, self.next_hirid());
+            }
+            ast::StmtKind::If(if_stmt) => {
+                let if_stmt = if_stmt.lower(&mut state);
+
+                let kind = hir::StmtKind::If(if_stmt);
+                return hir::Stmt::new(kind, self.next_hirid());
+            }
+            ast::StmtKind::Print(print) => {
+                let print = print
+                todo!()
+            }
+            ast::StmtKind::Return(ret) => {
+                todo!()
+            }
+            ast::StmtKind::VarDecl(decl) => {
+                todo!()
+            }
+            ast::StmtKind::While(while_loop) => {
+                todo!()
             }
         }
     }
@@ -190,6 +209,22 @@ impl Lowerer {
         let id = self.curr_hirid;
         self.curr_hirid += 1;
         id
+    }
+}
+
+impl LowerTo<hir::If> for ast::If {
+    fn lower(self, state: &mut LowerState) -> hir::If {
+        let condition = state.instance.lower_expr(*self.condition, state.ctx);
+
+        let body = state.instance.lower_stmt(*self.body, state.ctx);
+
+        let else_clause = if let Some(else_clause) = self.else_body {
+            Some(Box::new(state.instance.lower_stmt(*else_clause, state.ctx)))
+        } else {
+            None
+        };
+
+        return hir::If::new(condition, Box::new(body), else_clause);
     }
 }
 
