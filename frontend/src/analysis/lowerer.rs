@@ -112,8 +112,10 @@ impl Lowerer {
                 return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::Print(print) => {
-                let print = print
-                todo!()
+                let print = print.lower(&mut state);
+                let kind = hir::StmtKind::Print(print);
+
+                return hir::Stmt::new(kind, self.next_hirid());
             }
             ast::StmtKind::Return(ret) => {
                 todo!()
@@ -209,6 +211,14 @@ impl Lowerer {
         let id = self.curr_hirid;
         self.curr_hirid += 1;
         id
+    }
+}
+
+impl LowerTo<hir::Print> for ast::Print {
+    fn lower(self, state: &mut LowerState) -> hir::Print {
+        let expr = state.instance.lower_expr(*self.expr, state.ctx);
+
+        return hir::Print::new(expr);
     }
 }
 

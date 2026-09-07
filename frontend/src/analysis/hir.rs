@@ -45,7 +45,7 @@ pub struct Block {
     pub body: Vec<Stmt>,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Hir, Constructor)]
 pub struct Print {
     pub expr: Expr,
 }
