@@ -33,6 +33,9 @@ impl<'diag> SemanticAnalyzer<'diag> {
         let mut collecter = Collecter::new();
         collecter.collect(&program, &mut ctx);
 
+        let mut global_analyzer = GlobalVarAnalyzer::new();
+        global_analyzer.analyze_globals(&program, &mut ctx);
+
         let mut function_analyzer = FunctionAnalyzer::new();
         function_analyzer.analyze(&program, &mut ctx);
 
@@ -40,8 +43,6 @@ impl<'diag> SemanticAnalyzer<'diag> {
             return Err(());
         }
 
-        let mut global_analyzer = GlobalVarAnalyzer::new();
-        global_analyzer.analyze_globals(&program, &mut ctx);
 
         for (id, value) in &ctx.types {
             if let Some(conversion_type) = ctx.conversions.get(id) {
