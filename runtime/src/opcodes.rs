@@ -1,4 +1,4 @@
-use frontend::analysis::types::Conversion;
+use frontend::analysis::hir::ConversionKind;
 use num_enum::TryFromPrimitive;
 
 #[repr(u8)]
@@ -105,10 +105,12 @@ pub enum OpCode {
     ReturnVal = 0x2B,
 }
 
-impl From<Conversion> for OpCode {
-    fn from(value: Conversion) -> Self {
+impl From<ConversionKind> for OpCode {
+    fn from(value: ConversionKind) -> Self {
         match value {
-            Conversion::IntToDouble => Self::I32ToF64,
-        }
+            ConversionKind::IntToDouble => {
+                OpCode::I32ToF64
+            }
+        }        
     }
 }

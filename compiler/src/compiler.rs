@@ -321,6 +321,11 @@ impl Compiler {
 
     fn compile_expr(&mut self, expr: &Expr, chunk: &mut Chunk) {
         match &expr.kind {
+            ExprKind::Conversion(conversion) => {
+                self.compile_expr(&conversion.operand, chunk);
+
+                chunk.write(conversion.kind.into() as u8);
+            }
             ExprKind::Literal(litkind) => {
                 match litkind.kind {
                     LiteralKind::Int(i) => {
@@ -668,11 +673,11 @@ impl Compiler {
                     }
                 };
             }
-            ExprKind::VarAssign(target, value) => {
-                self.compile_expr(value, chunk, metadata);
+            ExprKind::VarAssign(assign) => {
+                self.compile_expr(&assign.value, chunk);
 
-                let varid = match target.kind {
-                    ExprKind::Variable(..) => metadata.variables.get(&target.id).unwrap(),
+                let varid = match assign.target.kind {
+                    ExprKind::Variable(v) => metadata.variables.get(&target.id).unwrap(),
                     _ => unreachable!("non lvalue?"),
                 };
 
@@ -730,12 +735,5 @@ impl Compiler {
             }
         }
 
-        if let Some(conversion) = metadata.conversions.get(&expr.id) {
-            match conversion {
-                Conversion::IntToDouble => {
-                    chunk.write(OpCode::I32ToF64 as u8);
-                }
-            }
-        }
     }
 }

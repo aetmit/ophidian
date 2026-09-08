@@ -207,8 +207,8 @@ pub enum ConversionKind {
 
 #[derive(Debug, PartialEq, Clone, Constructor, Hir)]
 pub struct Conversion {
-    kind: ConversionKind,
-    operand: Box<Expr>,
+    pub kind: ConversionKind,
+    pub operand: Box<Expr>,
 }
 
 #[derive(Debug, PartialEq, Clone, Hir)]
