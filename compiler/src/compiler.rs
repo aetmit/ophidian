@@ -5,7 +5,7 @@ use frontend::diagnostics::Diagnostic;
 use frontend::lex::Lexer;
 use frontend::parse::Parser;
 use frontend::analysis::hir::{BinaryOpKind, Expr, ExprKind, ForInit, ForInitKind, Function, GlobalVarDecl, Item, LiteralKind, Program, Stmt, StmtKind, UnaryOpKind};
-use frontend::analysis::ids::LocalVarId;
+use frontend::analysis::ids::{LocalVarId, VariableId};
 use runtime::chunk::Chunk;
 use runtime::disassembler::Disassembler;
 use runtime::opcodes::OpCode;
@@ -323,8 +323,8 @@ impl Compiler {
         match &expr.kind {
             ExprKind::Conversion(conversion) => {
                 self.compile_expr(&conversion.operand, chunk);
-
-                chunk.write(conversion.kind.into() as u8);
+                let opcode: OpCode = conversion.kind.into();
+                chunk.write(opcode as u8);
             }
             ExprKind::Literal(litkind) => {
                 match litkind.kind {
@@ -532,7 +532,7 @@ impl Compiler {
                         }
                     },
                     UnaryOpKind::PostDecrement => {
-                        match expr.ty {
+                        match unary.operand.ty {
                             Type::Int => {
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::LoadConst as u8);
@@ -543,8 +543,22 @@ impl Compiler {
                                 chunk.write(OpCode::I32Sub as u8);
 
                                 chunk.write(OpCode::I32StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Double => {
@@ -557,8 +571,22 @@ impl Compiler {
                                 chunk.write(OpCode::F64Sub as u8);
 
                                 chunk.write(OpCode::F64StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Void => {
@@ -570,7 +598,7 @@ impl Compiler {
                         }
                     }
                     UnaryOpKind::PostIncrement => {
-                        match metadata.converted_types.get(&right.id).unwrap() {
+                        match unary.operand.ty {
                             Type::Int => {
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::LoadConst as u8);
@@ -580,8 +608,22 @@ impl Compiler {
                                 chunk.write(OpCode::I32Add as u8);
 
                                 chunk.write(OpCode::I32StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Double => {
@@ -593,8 +635,22 @@ impl Compiler {
                                 chunk.write(OpCode::F64Add as u8);
 
                                 chunk.write(OpCode::F64StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Void => {
@@ -606,7 +662,7 @@ impl Compiler {
                         }
                     }
                     UnaryOpKind::PreDecrement => {
-                        match metadata.converted_types.get(&right.id).unwrap() {
+                        match unary.operand.ty {
                             Type::Int => {
                                 chunk.write(OpCode::LoadConst as u8);
                                 let idx = chunk.write_constant(Value::new_int(1));
@@ -615,8 +671,22 @@ impl Compiler {
                                 chunk.write(OpCode::I32Sub as u8);
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::I32StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Double => {
@@ -627,8 +697,22 @@ impl Compiler {
                                 chunk.write(OpCode::F64Sub as u8);
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::F64StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Void => {
@@ -640,7 +724,7 @@ impl Compiler {
                         }
                     }
                     UnaryOpKind::PreIncrement => {
-                        match metadata.converted_types.get(&right.id).unwrap() {
+                        match unary.operand.ty {
                             Type::Int => {
                                 chunk.write(OpCode::LoadConst as u8);
                                 let idx = chunk.write_constant(Value::new_int(1));
@@ -648,8 +732,22 @@ impl Compiler {
                                 chunk.write(OpCode::I32Add as u8);
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::I32StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => { 
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Double => {
@@ -659,8 +757,22 @@ impl Compiler {
                                 chunk.write(OpCode::F64Add as u8);
                                 chunk.write(OpCode::Dup as u8);
                                 chunk.write(OpCode::F64StoreLocal as u8);
-                                let varid = metadata.variables.get(&right.id).unwrap();
-                                let slot = self.locals.get(varid).unwrap();
+                                let varid = match &unary.operand.kind {
+                                    ExprKind::Variable(v) => {
+                                        match v.id {
+                                            VariableId::Global(_) => {
+                                                todo!()
+                                            }
+                                            VariableId::Local(id) => {
+                                                id
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        unreachable!()
+                                    }
+                                };
+                                let slot = self.locals.get(&varid).unwrap();
                                 chunk.write_u24(slot.0 as u32);
                             }
                             Type::Void => {
@@ -676,25 +788,34 @@ impl Compiler {
             ExprKind::VarAssign(assign) => {
                 self.compile_expr(&assign.value, chunk);
 
-                let varid = match assign.target.kind {
-                    ExprKind::Variable(v) => metadata.variables.get(&target.id).unwrap(),
+                let varid = match &assign.target.kind {
+                    ExprKind::Variable(v) => {
+                        match v.id {
+                            VariableId::Global(_) => {
+                                unreachable!()
+                            }
+                            VariableId::Local(id) => {
+                                id
+                            }
+                        }
+                    }
                     _ => unreachable!("non lvalue?"),
                 };
 
                 chunk.write(OpCode::Dup as u8);
 
-                match metadata.var_types.get(varid).unwrap() {
+                match expr.ty {
                     Type::Int => {
                         chunk.write(OpCode::I32StoreLocal as u8);
-                        chunk.write_u24((*self.locals.get(varid).unwrap()).into());
+                        chunk.write_u24((*self.locals.get(&varid).unwrap()).into());
                     }
                     Type::Bool => {
                         chunk.write(OpCode::BStoreLocal as u8);
-                        chunk.write_u24((*self.locals.get(varid).unwrap()).into());
+                        chunk.write_u24((*self.locals.get(&varid).unwrap()).into());
                     }
                     Type::Double => {
                         chunk.write(OpCode::F64StoreLocal as u8);
-                        chunk.write_u24((*self.locals.get(varid).unwrap()).into());
+                        chunk.write_u24((*self.locals.get(&varid).unwrap()).into());
                     }
                     Type::Void => {
                         todo!()
@@ -702,9 +823,9 @@ impl Compiler {
                     Type::Error => unreachable!(),
                 }
             }
-            ExprKind::Variable(_name) => {
-                let varid = *metadata.variables.get(&expr.id).unwrap();
-                match metadata.var_types.get(&varid).unwrap() {
+            ExprKind::Variable(var) => {
+                let varid = var.id;
+                match expr.ty {
                     Type::Int => {
                         chunk.write(OpCode::I32LoadLocal as u8);
                     }
@@ -721,11 +842,19 @@ impl Compiler {
                         unreachable!()
                     }
                 }
+
+                let localid = match varid {
+                    VariableId::Global(_) => {
+                        unreachable!()
+                    }
+                    VariableId::Local(id) => {
+                        id
+                    }
+                };
                 chunk.write_u24(
                     (*self
                         .locals
-                        .get(metadata.variables.get(&expr.id).unwrap())
-                        .unwrap())
+                        .get(&localid).unwrap())
                     .try_into()
                     .expect("overflow"),
                 );

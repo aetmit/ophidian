@@ -184,7 +184,7 @@ pub enum UnaryOpKind {
 
 #[derive(Debug, PartialEq, Clone, Constructor, Hir)]
 pub struct Variable {
-    id: VariableId,
+    pub id: VariableId,
 }
 
 #[derive(Debug, PartialEq, Clone, Constructor, Hir)]
@@ -200,7 +200,7 @@ pub struct Call {
     pub args: Vec<Expr>,
 }
 
-#[derive(Debug, PartialEq, Clone, Hir)]
+#[derive(Debug, PartialEq, Clone, Copy, Hir)]
 pub enum ConversionKind {
     IntToDouble,
 }
