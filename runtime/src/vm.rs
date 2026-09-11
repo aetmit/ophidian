@@ -1,3 +1,5 @@
+use macros::Constructor;
+
 use crate::chunk::Chunk;
 use crate::opcodes::OpCode;
 use crate::stack::Stack;
@@ -16,7 +18,7 @@ impl CallFrame {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Constructor)]
 pub struct RuntimeFunction {
     start: *const u8,
     arity: usize,

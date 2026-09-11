@@ -4,12 +4,13 @@ use frontend::analysis::types::Type;
 use frontend::diagnostics::Diagnostic;
 use frontend::lex::Lexer;
 use frontend::parse::Parser;
-use frontend::analysis::hir::{BinaryOpKind, Expr, ExprKind, ForInit, ForInitKind, Function, GlobalVarDecl, Item, LiteralKind, Program, Stmt, StmtKind, UnaryOpKind};
+use frontend::analysis::hir::{BinaryOpKind, Expr, ExprKind, ForInitKind, Function, GlobalVarDecl, Item, LiteralKind, Program, Stmt, StmtKind, UnaryOpKind};
 use frontend::analysis::ids::{LocalVarId, VariableId};
 use runtime::chunk::Chunk;
 use runtime::disassembler::Disassembler;
 use runtime::opcodes::OpCode;
 use runtime::value::Value;
+use runtime::vm::{RuntimeFunction, RuntimeFunctionId};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
@@ -96,7 +97,12 @@ impl Compiler {
     }
 
     fn compile_fn(&mut self, function: &Function, chunk: &mut Chunk) {
+        let arity = function.params.len();
 
+        let local_count = 0; 
+        let start = std::ptr::null();
+        let r_function = RuntimeFunction::new(start, arity, local_count);
+        // self.compile_stmt(function.body.try_into().unwrap(), chunk);
     }
 
     fn compile_gloval_var_decl(&mut self, decl: &GlobalVarDecl, chunk: &mut Chunk) {

@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 num_enum = { workspace = true }
 frontend = { workspace = true }
+macros = { workspace = true }
